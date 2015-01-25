@@ -3,7 +3,7 @@
 2. Download and unzip data to working directory
 3. Load script file: source("run_analysis.R")
 4. Type :runAnalysis(), export final.txt file result
-## **How script work**
+**How script work**
 1. Read features.txt
 2. Find element contain mean or std
 3. Read train data into one dataset: X_train.txt, y_train.txt, subject_train.txt
