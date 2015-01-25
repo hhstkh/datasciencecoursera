@@ -3,6 +3,7 @@
 2. Download and unzip data to working directory
 3. Load script file: source("run_analysis.R")
 4. Type :runAnalysis(), export final.txt file result
+</br>
 **How script work**
 1. Read features.txt
 2. Find element contain mean or std
