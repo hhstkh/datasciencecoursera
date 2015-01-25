@@ -1,7 +1,7 @@
 
 # Get and clean data
 
-function run_analysis() {
+runAnalysis <- function() {
   # Read features.txt
   features <- read.table("getdata_projectfiles_UCI HAR Dataset/UCI HAR Dataset/features.txt")
   # Convert to name
@@ -36,6 +36,8 @@ function run_analysis() {
   finalData <- finalData[, 2:69]
   # the average of each variable for each activity and each subject
   finalData <- aggregate(.~ subject + description, finalData, mean)
+  #export to file
+  write.table(finalData, file = "final.txt", row.names = F)
 }
 
 
