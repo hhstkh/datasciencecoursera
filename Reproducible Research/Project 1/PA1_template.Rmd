@@ -1,0 +1,157 @@
+---
+title: "Reproducible Research Project 1"
+output: html_document
+---
+##Introduction
+
+This is an R Markdown document for Reproducible Research's project 1. This project analyses data about personal activity activity monitoring devices such as a [Fitbit](http://www.fitbit.com/#i.yzjwip6xjejstg), [Nike Fuelband](http://www.nike.com/us/en_us/c/nikeplus-fuel), or [Jawbone Up](https://jawbone.com/up). These type of devices are part of the "quantified self" movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. But these data remain under-utilized both because the raw data are hard to obtain and there is a lack of statistical methods and software for processing and interpreting the data.
+
+##Data
+
+The data for this assignment can be downloaded from the course web site:
+
+    Dataset: Activity monitoring data [52K]
+
+The variables included in this dataset are:
+
+    steps: Number of steps taking in a 5-minute interval (missing values are coded as NA)
+
+    date: The date on which the measurement was taken in YYYY-MM-DD format
+
+    interval: Identifier for the 5-minute interval in which measurement was taken
+
+The dataset is stored in a comma-separated-value (CSV) file and there are a total of 17,568 observations in this dataset.
+
+## Load libraries
+```{r, echo=TRUE}
+library(dplyr)
+library(lubridate)
+library(lattice)
+
+```
+
+## Loading and preprocessing the data
+
+```{r, echo=TRUE}
+if(!file.exists("activity.csv")) {
+    download.file(url = "http://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip", destfile = "repdata_data_activity.zip", mode ="wb")
+    unzip("repdata_data_activity.zip")
+}
+
+activityData <- read.csv("activity.csv", colClasses = c("integer", "Date", "integer"))
+activity_df <- tbl_df(activityData)
+```
+
+interval' data type is integer, this makes gap when plotting data. We will convert data type of this column to time (HH:mm)
+```{r, echo=TRUE}
+activity_df$interval <- sprintf('%04d', activity_df$interval)
+activity_df$interval <- strptime(activity_df$interval, format = "%H%m")
+```
+
+## Question 1. What is mean total number of steps taken per day?
+Group by same date, then sum steps.
+
+```{r, echo=TRUE}
+totalStepsPerDay <- activity_df %>%  # dplyr package is needed
+    group_by(date) %>%
+    summarise(steps = sum(steps, na.rm = TRUE))
+```
+
+Plot data:
+
+```{r, echo=TRUE}
+with(totalStepsPerDay, hist(steps, main = "Total number of steps taken per day",
+                            xlab = "steps", ylab = "", col = "blue1"))
+```
+
+Look at mean and median from number of step taken per day.
+
+```{r, echo=TRUE}
+meanMedianData <- activityData %>%  # dplyr package is needed
+    group_by(date) %>%
+    summarise(meanStep = mean(steps, na.rm = TRUE), medianStep = median(steps, na.rm = TRUE))
+meanMedianData
+```
+
+## Question 2. What is the average daily activity pattern?
+
+Group by interval, then we average steps
+
+```{r, echo=TRUE}
+avgStepsAcrossDay <- activity_df %>%  # dplyr package is needed
+    group_by(interval) %>%
+    summarise(avgSteps = mean(steps, na.rm = TRUE))
+```
+
+Then we create a line plot.
+
+```{r, echo=TRUE}
+with(avgStepsAcrossDay, plot(x = interval, y = avgSteps, 
+                             ylab = "number of steps",
+                             type = "l", col = "blue1"))
+```
+
+5-minute interval, on average across all the days in the dataset, contains the maximum number of steps:
+```{r, echo=TRUE}
+# Sort desc average number of steps
+avgStepsAcrossDay <- arrange(avgStepsAcrossDay, desc(avgSteps))
+avgStepsAcrossDay[1,1]
+```
+
+
+## Question 3. Inputing missing values
+
+To fill missing value of analytic data. We get a dataset for averaging number of steps based on interval (*we had from Question 2*). We get all missing value of analytic data. After that, we loop this data, update number of steps whose value is get from averaging data that interval of them is same.
+
+Please see code below:
+
+```{r, echo=TRUE}
+# Create new data
+newActivityData <- activityData
+indexMissingData <- which(is.na(activityData$steps))
+
+for(i in indexMissingData) {
+    newActivityData$steps[i] <- with(avgStepsAcrossDay, round(avgSteps[interval == newActivityData$interval[i]]))
+}
+```
+
+Then , to plot total number of steps for new data filled. We do same things question 1.
+
+```{r, echo=TRUE}
+totalStepsPerDayNew <- newActivityData %>%  # dplyr package is needed
+    group_by(date) %>%
+    summarise(steps = sum(steps, na.rm = TRUE))
+
+with(totalStepsPerDayNew, hist(steps, main = "The total number of steps taken per date with data filled", xlab = "steps", ylab = "", col = "blue1"))
+```
+
+
+Look at mean and median from number of step taken per day for new data filled missing value.
+
+```{r, echo=TRUE}
+meanMedianDataNew <- newActivityData %>%  # dplyr package is needed
+    group_by(date) %>%
+    summarise(meanStep = mean(steps, na.rm = TRUE), medianStep = median(steps, na.rm = TRUE))
+meanMedianDataNew
+```
+
+## Question4. Are there differences in activity patterns between weekdays and weekends?
+
+We will add extra column - typeDate (weekday or weekend).
+
+```{r, echo=TRUE}
+newActivityData <- mutate(newActivityData, typeDate = ifelse(wday(date) == 1 | wday(date) == 7, "weekend", "weekday"))
+newActivityData$typeDate <- as.factor(newActivityData$typeDate)
+```
+
+We group dataset by typeDate, interval, then sum number of steps.
+
+```{r, echo=TRUE}
+newActivityDataTotal <- newActivityData %>% group_by(typeDate, interval) %>% summarise(steps = sum(steps))
+```
+
+Finally, We plot data to analyse number of steps by interval for each of type date.
+
+```{r, echo=TRUE}
+with(newActivityDataTotal, xyplot(steps ~ interval | typeDate, type = "l", layout = c(1, 2)))
+````
