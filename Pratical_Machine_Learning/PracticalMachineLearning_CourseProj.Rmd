@@ -1,0 +1,81 @@
+---
+title: "Practical Machine Learning Course Project"
+author: "Si Hiep Huynh"
+date: "September 28, 2015"
+output: html_document
+---
+
+##1. Executive Summary
+
+The goal of this project, as specified in Professor Leek's instructions, is to “predict the manner in which they did the exercise.”
+
+Describing how to build prediction model, how to use cross validation, the expected out of sample error is, and the strategy for selection model. Then using the prediction model to predict 20 different test cases. 
+
+##2. Getting and cleaning data
+
+```{r , echo=TRUE}
+url_raw_training <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+url_raw_testing <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+df_training <- read.csv(url_raw_training, na.strings=c("NA",""), header=TRUE)
+colnames_train <- colnames(df_training)
+df_testing <- read.csv(url_raw_testing, na.strings=c("NA",""), header=TRUE)
+colnames_test <- colnames(df_testing)
+# summary data
+str(df_training)
+str(df_testing)
+```
+
+We will remove NAs data:
+```{r, echo=TRUE}
+numNonNAs <- apply(df_training, 2 , function(x) length(which(!is.na(x))))
+numNonNAs <- as.vector(numNonNAs)
+# Remove columns whose number of non NAs are less number of row of data
+removeCols <- c()
+for (i in 1 : length(numNonNAs)) {
+    if (numNonNAs[i] < nrow(df_training)) {
+        removeCols <- c(removeCols, colnames_train[i])
+    }
+}
+
+df_training <- df_training[,!(names(df_training) %in% removeCols)]
+df_training <- df_training[,8:length(colnames(df_training))]
+
+df_testing <- df_testing[,!(names(df_testing) %in% removeCols)]
+df_testing <- df_testing[,8:length(colnames(df_testing))]
+
+```
+##3. Splitting data
+
+```{r, echo=TRUE}
+library(AppliedPredictiveModeling)
+library(caret)
+library(rattle)
+library(rpart)
+library(rpart.plot)
+library(randomForest)
+inTrain <- createDataPartition(y=df_training$classe, p=0.6, list=FALSE)
+trainingData <- df_training[inTrain, ]; testingData <- df_training[-inTrain, ]
+```
+
+##4.Using ML algorithms for prediction: Decision Tree
+```{r, echo=FALSE}
+modFitA1 <- rpart(classe ~ ., data=trainingData, method="class")
+fancyRpartPlot(modFitA1)
+```
+
+Predicting:
+```{r, echo=TRUE}
+predictionsA1 <- predict(modFitA1, testingData, type = "class")
+confusionMatrix(predictionsA1, testingData$classe)
+```
+
+##5. Using ML algorithms for prediction: Random Forests
+```{r, echo=FALSE}
+modFitA2 <- randomForest(classe ~ ., data=trainingData, method="class")
+
+```
+
+Predicting:
+```{r, echo=TRUE}
+predictionsA2 <- predict(modFitA2, testingData, type = "class")
+confusionMatrix(predictionsA2, testingData$classe)
